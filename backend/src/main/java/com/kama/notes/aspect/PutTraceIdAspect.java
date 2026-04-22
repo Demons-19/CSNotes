@@ -14,7 +14,7 @@ public class PutTraceIdAspect {
     /**
      * 切面切入点，拦截所有控制器的方法。
      */
-    @Before("execution(* com.kama.notes..*(..))")
+    @Before("execution(* com.kama.notes.controller..*(..))")
     public void addTraceIdToLog() {
         // 如果当前 MDC 中没有 traceId，则生成一个新的
         if (MDC.get(TRACE_ID_KEY) == null) {

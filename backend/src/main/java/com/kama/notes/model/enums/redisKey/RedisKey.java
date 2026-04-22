@@ -60,6 +60,20 @@ public class RedisKey {
     }
 
     /**
+     * 笔记详情用户点赞状态 Redis 键名
+     */
+    public static String noteUserLiked(Long userId, Integer noteId) {
+        return "note:user:liked:" + userId + ":" + noteId;
+    }
+
+    /**
+     * 笔记详情用户收藏状态 Redis 键名
+     */
+    public static String noteUserCollected(Long userId, Integer noteId) {
+        return "note:user:collected:" + userId + ":" + noteId;
+    }
+
+    /**
      * 笔记热榜结果列表 Redis 键名匹配模式
      *
      * @return 格式为 "note:hot:rank:list:*" 的匹配模式
