@@ -5,9 +5,11 @@ import com.kama.notes.config.NoteReviewProperties;
 import com.kama.notes.event.MessageEvent;
 import com.kama.notes.mapper.NoteMapper;
 import com.kama.notes.model.entity.Note;
+import com.kama.notes.model.entity.Question;
 import com.kama.notes.service.NoteHotRankService;
 import com.kama.notes.service.NoteReviewProcessor;
 import com.kama.notes.service.NoteReviewQueueService;
+import com.kama.notes.service.QuestionService;
 import com.kama.notes.utils.MessageBuilder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,8 +49,55 @@ public class NoteReviewProcessorImpl implements NoteReviewProcessor {
     @Autowired
     private NoteReviewProperties properties;
 
+    @Autowired
+    private QuestionService questionService;
+
     @Override
     public void process(MapRecord<String, Object, Object> record) {
+        String type = parseString(record.getValue().get("type"));
+        if ("create".equals(type)) {
+            processCreate(record);
+            return;
+        }
+        processReview(record);
+    }
+
+    private void processCreate(MapRecord<String, Object, Object> record) {
+        Long userId = parseLong(record.getValue().get("userId"));
+        Integer questionId = parseInteger(record.getValue().get("questionId"));
+        String content = parseString(record.getValue().get("content"));
+        if (userId == null || questionId == null || content == null || content.isBlank()) {
+            ack(record);
+            return;
+        }
+
+        try {
+            Question question = questionService.findById(questionId);
+            if (question == null) {
+                applicationEventPublisher.publishEvent(new MessageEvent(this,
+                        MessageBuilder.systemAnnouncement(userId, "笔记提交失败：题目不存在或已被删除")));
+                ack(record);
+                return;
+            }
+
+            Note note = new Note();
+            note.setAuthorId(userId);
+            note.setQuestionId(questionId);
+            note.setContent(content);
+            note.setStatus(STATUS_REVIEWING);
+            note.setReviewRetryCount(0);
+            noteMapper.insert(note);
+            noteReviewQueueService.enqueue(note.getNoteId(), userId);
+            ack(record);
+        } catch (Exception e) {
+            log.error("异步创建笔记失败, userId={}, questionId={}", userId, questionId, e);
+            applicationEventPublisher.publishEvent(new MessageEvent(this,
+                    MessageBuilder.systemAnnouncement(userId, "笔记提交失败，请稍后重试")));
+            ack(record);
+        }
+    }
+
+    private void processReview(MapRecord<String, Object, Object> record) {
         Integer noteId = parseInteger(record.getValue().get("noteId"));
         Long userId = parseLong(record.getValue().get("userId"));
         if (noteId == null || userId == null) {
@@ -145,6 +194,10 @@ public class NoteReviewProcessorImpl implements NoteReviewProcessor {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    private String parseString(Object value) {
+        return value == null ? null : String.valueOf(value);
     }
 
     private String truncate(String text) {

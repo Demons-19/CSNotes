@@ -5,4 +5,5 @@ import lombok.Data;
 @Data
 public class CreateNoteVO {
     private Integer noteId;
+    private Boolean accepted;
 }

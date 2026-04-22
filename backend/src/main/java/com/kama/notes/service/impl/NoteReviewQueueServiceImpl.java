@@ -21,8 +21,19 @@ public class NoteReviewQueueServiceImpl implements NoteReviewQueueService {
     private NoteReviewProperties properties;
 
     @Override
+    public void enqueueCreate(Long userId, Integer questionId, String content) {
+        Map<String, String> payload = new HashMap<>();
+        payload.put("type", "create");
+        payload.put("userId", String.valueOf(userId));
+        payload.put("questionId", String.valueOf(questionId));
+        payload.put("content", content);
+        stringRedisTemplate.opsForStream().add(MapRecord.create(properties.getStreamKey(), payload));
+    }
+
+    @Override
     public void enqueue(Integer noteId, Long userId) {
         Map<String, String> payload = new HashMap<>();
+        payload.put("type", "review");
         payload.put("noteId", String.valueOf(noteId));
         payload.put("userId", String.valueOf(userId));
         stringRedisTemplate.opsForStream().add(MapRecord.create(properties.getStreamKey(), payload));

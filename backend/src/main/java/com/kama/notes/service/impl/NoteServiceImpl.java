@@ -89,9 +89,7 @@ public class NoteServiceImpl implements NoteService {
     @Override @NeedLogin
     public ApiResponse<CreateNoteVO> createNote(CreateNoteRequest r){
         Long uid=requestScopeData.getUserId();
-        if(questionService.findById(r.getQuestionId())==null)return ApiResponseUtil.error("questionId 对应的问题不存在");
-        Note note=new Note();BeanUtils.copyProperties(r,note);note.setAuthorId(uid);note.setStatus(0);note.setReviewRetryCount(0);
-        try{noteMapper.insert(note);noteReviewQueueService.enqueue(note.getNoteId(),uid);CreateNoteVO vo=new CreateNoteVO();vo.setNoteId(note.getNoteId());return ApiResponseUtil.success("笔记提交成功，正在审核中",vo);}catch(Exception e){log.error("创建笔记失败",e);return ApiResponseUtil.error("创建笔记失败");}
+        try{noteReviewQueueService.enqueueCreate(uid,r.getQuestionId(),r.getContent());CreateNoteVO vo=new CreateNoteVO();vo.setAccepted(true);return ApiResponseUtil.success("笔记已提交，正在排队处理",vo);}catch(Exception e){log.error("提交笔记任务失败",e);return ApiResponseUtil.error("笔记提交失败");}
     }
 
     @Override @NeedLogin

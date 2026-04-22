@@ -2,7 +2,7 @@
 <jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
   <hashTree>
     <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="Note Publish Perf Test Plan" enabled="true">
-      <stringProp name="TestPlan.comments">登录后压测 POST /api/notes。支持通过 -J 参数覆盖 host、port、account、password、questionId、threads 等变量。</stringProp>
+      <stringProp name="TestPlan.comments">登录后压测 POST /api/notes，使用极短内容，便于观察“先入 Stream、后异步落库”发布链路的吞吐。</stringProp>
       <boolProp name="TestPlan.functional_mode">false</boolProp>
       <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
       <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
@@ -25,12 +25,12 @@
           </elementProp>
           <elementProp name="threads" elementType="Argument">
             <stringProp name="Argument.name">threads</stringProp>
-            <stringProp name="Argument.value">${__P(threads,50)}</stringProp>
+            <stringProp name="Argument.value">${__P(threads,100)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="rampUp" elementType="Argument">
             <stringProp name="Argument.name">rampUp</stringProp>
-            <stringProp name="Argument.value">${__P(rampUp,10)}</stringProp>
+            <stringProp name="Argument.value">${__P(rampUp,5)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="duration" elementType="Argument">
@@ -40,12 +40,12 @@
           </elementProp>
           <elementProp name="connectTimeout" elementType="Argument">
             <stringProp name="Argument.name">connectTimeout</stringProp>
-            <stringProp name="Argument.value">${__P(connectTimeout,5000)}</stringProp>
+            <stringProp name="Argument.value">${__P(connectTimeout,3000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="responseTimeout" elementType="Argument">
             <stringProp name="Argument.name">responseTimeout</stringProp>
-            <stringProp name="Argument.value">${__P(responseTimeout,10000)}</stringProp>
+            <stringProp name="Argument.value">${__P(responseTimeout,5000)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="account" elementType="Argument">
@@ -65,7 +65,7 @@
           </elementProp>
           <elementProp name="contentPrefix" elementType="Argument">
             <stringProp name="Argument.name">contentPrefix</stringProp>
-            <stringProp name="Argument.value">${__P(contentPrefix,perf-note)}</stringProp>
+            <stringProp name="Argument.value">${__P(contentPrefix,a)}</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>
@@ -171,7 +171,7 @@
             <collectionProp name="Arguments.arguments">
               <elementProp name="" elementType="HTTPArgument">
                 <boolProp name="HTTPArgument.always_encode">false</boolProp>
-                <stringProp name="Argument.value">{"questionId":${questionId},"content":"${contentPrefix}-${__threadNum}-${__UUID}"}</stringProp>
+                <stringProp name="Argument.value">{"questionId":${questionId},"content":"${contentPrefix}"}</stringProp>
                 <stringProp name="Argument.metadata">=</stringProp>
               </elementProp>
             </collectionProp>
