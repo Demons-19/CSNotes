@@ -54,19 +54,31 @@
     </select>
 
     <select id="findTopLevelByNoteId" resultMap="commentMap">
-        SELECT <include refid="selectFields"/>
-        FROM comment
-        WHERE note_id = #{noteId}
-          AND (parent_id IS NULL OR parent_id = 0)
+        SELECT c.<include refid="selectFields"/>
+        FROM comment c
+        INNER JOIN (
+            SELECT comment_id
+            FROM comment
+            WHERE note_id = #{noteId}
+              AND (parent_id IS NULL OR parent_id = 0)
+            <choose>
+                <when test="sort == 'hot'">
+                    ORDER BY like_count DESC, reply_count DESC, created_at DESC, comment_id DESC
+                </when>
+                <otherwise>
+                    ORDER BY created_at DESC, comment_id DESC
+                </otherwise>
+            </choose>
+            LIMIT #{pageSize} OFFSET #{offset}
+        ) t ON c.comment_id = t.comment_id
         <choose>
             <when test="sort == 'hot'">
-                ORDER BY like_count DESC, reply_count DESC, created_at DESC
+                ORDER BY c.like_count DESC, c.reply_count DESC, c.created_at DESC, c.comment_id DESC
             </when>
             <otherwise>
-                ORDER BY created_at DESC
+                ORDER BY c.created_at DESC, c.comment_id DESC
             </otherwise>
         </choose>
-        LIMIT #{pageSize} OFFSET #{offset}
     </select>
 
     <select id="countTopLevelByNoteId" resultType="int">
