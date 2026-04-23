@@ -6,6 +6,7 @@ import com.kama.notes.model.dto.comment.CommentQueryParams;
 import com.kama.notes.model.dto.comment.CreateCommentRequest;
 import com.kama.notes.model.dto.comment.UpdateCommentRequest;
 import com.kama.notes.model.vo.comment.CommentVO;
+import com.kama.notes.model.vo.comment.CursorCommentListVO;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -15,57 +16,17 @@ import java.util.List;
  */
 @Transactional
 public interface CommentService {
-    /**
-     * 创建评论
-     *
-     * @param request 创建评论请求
-     * @return 创建的评论ID
-     */
     ApiResponse<Integer> createComment(CreateCommentRequest request);
 
-    /**
-     * 更新评论
-     *
-     * @param commentId 评论ID
-     * @param request 更新评论请求
-     * @return 空响应
-     */
     ApiResponse<EmptyVO> updateComment(Integer commentId, UpdateCommentRequest request);
 
-    /**
-     * 删除评论
-     *
-     * @param commentId 评论ID
-     * @return 空响应
-     */
     ApiResponse<EmptyVO> deleteComment(Integer commentId);
 
-    /**
-     * 获取一级评论列表
-     *
-     * @param params 查询参数
-     * @return 评论列表
-     */
-    ApiResponse<List<CommentVO>> getComments(CommentQueryParams params);
+    ApiResponse<CursorCommentListVO> getComments(CommentQueryParams params);
 
-    /**
-     * 获取某个一级评论下的回复列表
-     */
     ApiResponse<List<CommentVO>> getReplies(Integer rootCommentId, Integer page, Integer pageSize, String sort);
 
-    /**
-     * 点赞评论
-     *
-     * @param commentId 评论ID
-     * @return 空响应
-     */
     ApiResponse<EmptyVO> likeComment(Integer commentId);
 
-    /**
-     * 取消点赞评论
-     *
-     * @param commentId 评论ID
-     * @return 空响应
-     */
     ApiResponse<EmptyVO> unlikeComment(Integer commentId);
 }

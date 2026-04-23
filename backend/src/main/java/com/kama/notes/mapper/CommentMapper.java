@@ -27,6 +27,11 @@ public interface CommentMapper {
                                        @Param("pageSize") Integer pageSize,
                                        @Param("offset") Integer offset);
 
+    List<Comment> findTopLevelByNoteIdCursor(@Param("noteId") Integer noteId,
+                                              @Param("sort") String sort,
+                                              @Param("pageSize") Integer pageSize,
+                                              @Param("params") CommentQueryParams params);
+
     int countTopLevelByNoteId(Integer noteId);
 
     List<Comment> findRepliesByRootCommentId(@Param("rootCommentId") Integer rootCommentId,

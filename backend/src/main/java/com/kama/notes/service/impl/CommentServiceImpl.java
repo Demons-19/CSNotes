@@ -4,11 +4,11 @@ import com.kama.notes.annotation.NeedLogin;
 import com.kama.notes.event.MessageEvent;
 import com.kama.notes.model.base.ApiResponse;
 import com.kama.notes.model.base.EmptyVO;
+import com.kama.notes.model.base.Pagination;
 import com.kama.notes.mapper.CommentMapper;
 import com.kama.notes.mapper.NoteMapper;
 import com.kama.notes.mapper.UserMapper;
 import com.kama.notes.mapper.CommentLikeMapper;
-import com.kama.notes.model.base.Pagination;
 import com.kama.notes.model.entity.Comment;
 import com.kama.notes.model.entity.CommentLike;
 import com.kama.notes.model.entity.Note;
@@ -17,6 +17,7 @@ import com.kama.notes.model.dto.comment.CommentQueryParams;
 import com.kama.notes.model.dto.comment.CreateCommentRequest;
 import com.kama.notes.model.dto.comment.UpdateCommentRequest;
 import com.kama.notes.model.vo.comment.CommentVO;
+import com.kama.notes.model.vo.comment.CursorCommentListVO;
 import com.kama.notes.model.vo.user.UserActionVO;
 import com.kama.notes.scope.RequestScopeData;
 import com.kama.notes.service.CommentService;
@@ -230,29 +231,33 @@ public class CommentServiceImpl implements CommentService {
     }
 
     @Override
-    public ApiResponse<List<CommentVO>> getComments(CommentQueryParams params) {
+    public ApiResponse<CursorCommentListVO> getComments(CommentQueryParams params) {
         try {
-            int offset = PaginationUtils.calculateOffset(params.getPage(), params.getPageSize());
             String normalizedSort = normalizeTopLevelSort(params.getSort());
-            List<Comment> topLevelComments = commentMapper.findTopLevelByNoteId(
-                    params.getNoteId(), normalizedSort, params.getPageSize(), offset);
-            int total = commentMapper.countTopLevelByNoteId(params.getNoteId());
-            if (topLevelComments.isEmpty()) {
-                return ApiResponseUtil.success("", Collections.emptyList(), new Pagination(params.getPage(), params.getPageSize(), total));
+            int querySize = params.getPageSize() + 1;
+            List<Comment> topLevelComments = commentMapper.findTopLevelByNoteIdCursor(
+                    params.getNoteId(), normalizedSort, querySize, params);
+            boolean hasMore = topLevelComments.size() > params.getPageSize();
+            List<Comment> items = hasMore
+                    ? topLevelComments.subList(0, params.getPageSize())
+                    : topLevelComments;
+
+            if (items.isEmpty()) {
+                CursorCommentListVO emptyVo = new CursorCommentListVO();
+                emptyVo.setItems(Collections.emptyList());
+                emptyVo.setHasMore(false);
+                emptyVo.setNextCursor(null);
+                return ApiResponse.success(emptyVo);
             }
 
-            List<Integer> rootCommentIds = topLevelComments.stream()
+            List<Integer> rootCommentIds = items.stream()
                     .map(Comment::getCommentId)
                     .toList();
-            List<Comment> previewReplies = rootCommentIds.isEmpty()
-                    ? Collections.emptyList()
-                    : commentMapper.findPreviewRepliesByRootCommentIds(rootCommentIds, DEFAULT_PREVIEW_REPLY_LIMIT);
-            Map<Integer, Integer> replyCountMap = rootCommentIds.isEmpty()
-                    ? Collections.emptyMap()
-                    : commentMapper.countRepliesByRootCommentIds(rootCommentIds).stream()
-                            .collect(Collectors.toMap(Comment::getRootCommentId, comment -> Optional.ofNullable(comment.getReplyCount()).orElse(0)));
+            List<Comment> previewReplies = commentMapper.findPreviewRepliesByRootCommentIds(rootCommentIds, DEFAULT_PREVIEW_REPLY_LIMIT);
+            Map<Integer, Integer> replyCountMap = commentMapper.countRepliesByRootCommentIds(rootCommentIds).stream()
+                    .collect(Collectors.toMap(Comment::getRootCommentId, comment -> Optional.ofNullable(comment.getReplyCount()).orElse(0)));
 
-            List<Comment> mergedComments = new ArrayList<>(topLevelComments);
+            List<Comment> mergedComments = new ArrayList<>(items);
             mergedComments.addAll(previewReplies);
             Map<Long, User> authorMap = buildAuthorMap(mergedComments);
             Set<Integer> likedSet = buildLikedSet(mergedComments);
@@ -260,7 +265,7 @@ public class CommentServiceImpl implements CommentService {
             Map<Integer, List<Comment>> previewReplyMap = previewReplies.stream()
                     .collect(Collectors.groupingBy(Comment::getRootCommentId, LinkedHashMap::new, Collectors.toList()));
 
-            List<CommentVO> result = topLevelComments.stream()
+            List<CommentVO> result = items.stream()
                     .map(comment -> {
                         CommentVO vo = toVO(comment, authorMap, likedSet);
                         vo.setReplyCount(replyCountMap.getOrDefault(comment.getCommentId(), 0));
@@ -277,7 +282,22 @@ public class CommentServiceImpl implements CommentService {
                     })
                     .toList();
 
-            return ApiResponseUtil.success("", result, new Pagination(params.getPage(), params.getPageSize(), total));
+            CursorCommentListVO vo = new CursorCommentListVO();
+            vo.setItems(result);
+            vo.setHasMore(hasMore);
+            if (hasMore && !items.isEmpty()) {
+                Comment last = items.get(items.size() - 1);
+                CursorCommentListVO.NextCursor nextCursor = new CursorCommentListVO.NextCursor();
+                nextCursor.setCreatedAt(last.getCreatedAt());
+                nextCursor.setCommentId(last.getCommentId());
+                nextCursor.setLikeCount(last.getLikeCount());
+                nextCursor.setReplyCount(last.getReplyCount());
+                vo.setNextCursor(nextCursor);
+            } else {
+                vo.setNextCursor(null);
+            }
+
+            return ApiResponse.success(vo);
         } catch (Exception e) {
             log.error("获取评论列表失败", e);
             return ApiResponse.error(HttpStatus.INTERNAL_SERVER_ERROR.value(), "获取评论列表失败");

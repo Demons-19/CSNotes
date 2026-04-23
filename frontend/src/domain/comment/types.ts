@@ -34,11 +34,27 @@ export interface Comment {
 export type CommentSort = 'hot' | 'latest'
 export type ReplySort = 'asc' | 'desc'
 
+export interface NextCursor {
+  createdAt: string
+  commentId: number
+  likeCount: number
+  replyCount: number
+}
+
+export interface CursorCommentListVO {
+  items: Comment[]
+  nextCursor: NextCursor | null
+  hasMore: boolean
+}
+
 export interface CommentQueryParams {
   noteId: number
-  page?: number
   pageSize?: number
   sort?: CommentSort
+  cursorCreatedAt?: string
+  cursorCommentId?: number
+  cursorLikeCount?: number
+  cursorReplyCount?: number
 }
 
 export interface ReplyQueryParams {

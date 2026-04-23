@@ -4,10 +4,10 @@ import {
   Comment,
   CreateCommentRequest,
   ReplySort,
+  NextCursor,
 } from '@/domain/comment/types.ts'
 import { commentService } from '@/domain/comment/service/commentService.ts'
 import { useUser } from '@/domain/user/hooks/useUser.ts'
-import { Pagination } from '@/request'
 
 interface ReplyState {
   items: Comment[]
@@ -24,39 +24,55 @@ const defaultReplyPageSize = 10
 export function useComment(commentQueryParams: CommentQueryParams) {
   const [comments, setComments] = useState<Comment[]>([])
   const [loading, setLoading] = useState(false)
-  const [pagination, setPagination] = useState<Pagination | undefined>({
-    total: 0,
-    page: 1,
-    pageSize: 10,
-  })
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<NextCursor | null>(null)
   const [replyStates, setReplyStates] = useState<Record<number, ReplyState>>({})
 
   const user = useUser()
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true)
-        const res = await commentService.getCommentsService(commentQueryParams)
-        setComments(res.data)
-        setPagination(res.pagination)
-      } catch (error: unknown) {
-        if (error instanceof Error) {
-          console.log(error.message)
-        }
-      } finally {
-        setLoading(false)
+  async function loadComments(reset = false, cursor?: NextCursor) {
+    try {
+      setLoading(true)
+      const params: CommentQueryParams = {
+        noteId: commentQueryParams.noteId,
+        pageSize: commentQueryParams.pageSize ?? 10,
+        sort: commentQueryParams.sort ?? 'hot',
       }
+      if (cursor) {
+        params.cursorCreatedAt = cursor.createdAt
+        params.cursorCommentId = cursor.commentId
+        params.cursorLikeCount = cursor.likeCount
+        params.cursorReplyCount = cursor.replyCount
+      }
+      const res = await commentService.getCommentsService(params)
+      const data = res.data
+      setComments((prev) => (reset ? data.items : [...prev, ...data.items]))
+      setHasMore(data.hasMore)
+      setNextCursor(data.nextCursor)
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(error.message)
+      }
+    } finally {
+      setLoading(false)
     }
+  }
 
-    fetchData().then()
+  useEffect(() => {
+    loadComments(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    commentQueryParams,
-    commentQueryParams.page,
     commentQueryParams.noteId,
     commentQueryParams.pageSize,
     commentQueryParams.sort,
   ])
+
+  async function loadMoreComments() {
+    if (!hasMore || loading || !nextCursor) {
+      return
+    }
+    await loadComments(false, nextCursor)
+  }
 
   async function loadReplies(
     rootCommentId: number,
@@ -298,12 +314,13 @@ export function useComment(commentQueryParams: CommentQueryParams) {
   return {
     loading,
     comments,
-    pagination,
+    hasMore,
     replyStates,
     createComment,
     likeComment,
     loadReplies,
     loadMoreReplies,
     changeReplySort,
+    loadMoreComments,
   }
 }

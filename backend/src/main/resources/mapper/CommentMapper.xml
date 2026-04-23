@@ -81,6 +81,44 @@
         </choose>
     </select>
 
+    <select id="findTopLevelByNoteIdCursor" resultMap="commentMap">
+        SELECT c.<include refid="selectFields"/>
+        FROM comment c
+        INNER JOIN (
+            SELECT comment_id
+            FROM comment
+            WHERE note_id = #{noteId}
+              AND (parent_id IS NULL OR parent_id = 0)
+            <if test="params.cursorCreatedAt != null or params.cursorCommentId != null or params.cursorLikeCount != null or params.cursorReplyCount != null">
+                <choose>
+                    <when test="sort == 'hot'">
+                        AND (like_count, reply_count, created_at, comment_id) &lt; (#{params.cursorLikeCount}, #{params.cursorReplyCount}, #{params.cursorCreatedAt}, #{params.cursorCommentId})
+                    </when>
+                    <otherwise>
+                        AND (created_at, comment_id) &lt; (#{params.cursorCreatedAt}, #{params.cursorCommentId})
+                    </otherwise>
+                </choose>
+            </if>
+            <choose>
+                <when test="sort == 'hot'">
+                    ORDER BY like_count DESC, reply_count DESC, created_at DESC, comment_id DESC
+                </when>
+                <otherwise>
+                    ORDER BY created_at DESC, comment_id DESC
+                </otherwise>
+            </choose>
+            LIMIT #{pageSize}
+        ) t ON c.comment_id = t.comment_id
+        <choose>
+            <when test="sort == 'hot'">
+                ORDER BY c.like_count DESC, c.reply_count DESC, c.created_at DESC, c.comment_id DESC
+            </when>
+            <otherwise>
+                ORDER BY c.created_at DESC, c.comment_id DESC
+            </otherwise>
+        </choose>
+    </select>
+
     <select id="countTopLevelByNoteId" resultType="int">
         SELECT COUNT(*)
         FROM comment

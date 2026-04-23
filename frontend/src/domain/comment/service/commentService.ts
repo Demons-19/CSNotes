@@ -3,13 +3,14 @@ import {
   Comment,
   CreateCommentRequest,
   ReplyQueryParams,
+  CursorCommentListVO,
 } from '@/domain/comment/types.ts'
 import { commentApiList } from '@/domain/comment/api/commentApi.ts'
 import { httpClient } from '@/request'
 
 export const commentService = {
   getCommentsService: (params: CommentQueryParams) => {
-    return httpClient.request<Comment[]>(commentApiList.comments, {
+    return httpClient.request<CursorCommentListVO>(commentApiList.comments, {
       queryParams: params,
     })
   },

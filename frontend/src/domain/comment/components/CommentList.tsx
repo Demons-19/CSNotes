@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Avatar, Button, Pagination, Segmented } from 'antd'
+import { Avatar, Button, Segmented } from 'antd'
 import { LikeOutlined, LikeFilled, MessageOutlined } from '@ant-design/icons'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
@@ -16,7 +16,6 @@ interface CommentListProps {
 const CommentList: React.FC<CommentListProps> = ({ noteId }) => {
   const [commentQueryParams, setCommentQueryParams] = useState({
     noteId,
-    page: 1,
     pageSize: 10,
     sort: 'hot' as CommentSort,
   })
@@ -26,11 +25,12 @@ const CommentList: React.FC<CommentListProps> = ({ noteId }) => {
     loading,
     createComment,
     likeComment,
-    pagination,
+    hasMore,
     replyStates,
     loadReplies,
     loadMoreReplies,
     changeReplySort,
+    loadMoreComments,
   } = useComment(commentQueryParams)
 
   const [replyTo, setReplyTo] = useState<Comment | null>(null)
@@ -272,7 +272,7 @@ const CommentList: React.FC<CommentListProps> = ({ noteId }) => {
       <div>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">
-            评论 ({pagination?.total ?? comments?.length ?? 0})
+            评论 ({comments?.length ?? 0})
           </h3>
           <Segmented
             value={commentQueryParams.sort}
@@ -283,16 +283,15 @@ const CommentList: React.FC<CommentListProps> = ({ noteId }) => {
             onChange={(value) => {
               setCommentQueryParams((prev) => ({
                 ...prev,
-                page: 1,
                 sort: value as CommentSort,
               }))
             }}
           />
         </div>
-        {loading ? (
-          <div className="comment-loading">加载中...</div>
-        ) : comments && comments.length > 0 ? (
+        {comments && comments.length > 0 ? (
           <div className="space-y-1">{comments.map(renderMainComment)}</div>
+        ) : loading ? (
+          <div className="comment-loading">加载中...</div>
         ) : (
           <div className="comment-empty">
             <div className="mb-4 text-4xl">💬</div>
@@ -301,22 +300,17 @@ const CommentList: React.FC<CommentListProps> = ({ noteId }) => {
         )}
       </div>
 
-      <div className="mt-4 flex justify-center">
-        <Pagination
-          total={pagination?.total}
-          current={commentQueryParams.page}
-          pageSize={commentQueryParams.pageSize}
-          onChange={(page, pageSize) => {
-            setCommentQueryParams((prev) => ({
-              ...prev,
-              page,
-              pageSize,
-            }))
-          }}
-          showSizeChanger={false}
-          showTotal={(total) => `共 ${total} 条一级评论`}
-        />
-      </div>
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <Button
+            type="link"
+            loading={loading}
+            onClick={() => loadMoreComments()}
+          >
+            加载更多评论
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
