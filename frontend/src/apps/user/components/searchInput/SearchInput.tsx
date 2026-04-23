@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import Search from 'antd/es/input/Search'
 import { InputRef } from 'antd'
-import { QuestionVO, SearchQuestionModal } from '../../../../domain/question'
+import { SearchQuestionModal } from '../../../../domain/question'
+import { NoteWithRelations } from '../../../../domain/note/types/serviceTypes.ts'
 import { useNavigate } from 'react-router-dom'
-import { QUESTION } from '../../router/config.ts'
+import { NOTE_DETAIL } from '../../router/config.ts'
 
 const SearchInput: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('')
@@ -28,13 +29,14 @@ const SearchInput: React.FC = () => {
           toggleIsModalOpen()
           searchInputRef.current?.blur()
         }}
+        placeholder="搜索问题标题或笔记内容"
         width={450}
-      ></Search>
+      />
       <SearchQuestionModal
         isModalOpen={isModalOpen}
         toggleIsModalOpen={toggleIsModalOpen}
-        onConfirm={(item: QuestionVO) => {
-          navigate(`${QUESTION}/${item.questionId}`)
+        onConfirm={(item: NoteWithRelations) => {
+          navigate(`${NOTE_DETAIL}/${item.noteId}`)
         }}
       />
     </>

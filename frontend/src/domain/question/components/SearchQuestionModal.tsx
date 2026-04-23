@@ -1,21 +1,19 @@
 import React, { useEffect, useState } from 'react'
-import { Empty, InputRef, Modal } from 'antd'
+import { Empty, InputRef, Modal, Spin } from 'antd'
 import { useSearchQuestion } from '../hooks/useSearchQuestion.ts'
 import Search from 'antd/es/input/Search'
 import SearchModalFooter from './SearchModalFooter.tsx'
-import { QuestionVO } from '../types/types.ts'
+import { NoteWithRelations } from '../../note/types/serviceTypes.ts'
 
 interface SearchQuestionModalProps {
   isModalOpen: boolean
   toggleIsModalOpen: () => void
-  onConfirm: (questionVO: QuestionVO) => void // 确认选中的回调函数
+  onConfirm: (note: NoteWithRelations) => void
 }
 
 const scrollToSelected = (index: number) => {
   const element = document.querySelector(`.result-item-${index}`)
   if (element) {
-    // 连续按住 ⬆️键或 ⬇️键 的时候，滚动到目标项并非匀速滚动，而是先暂停滚动后恢复快速滚动
-    // TODO: 后续需要使用 requestAnimationFrame 优化滚动逻辑，而非使用 scrollIntoView
     element.scrollIntoView({
       behavior: 'smooth',
       block: 'center',
@@ -28,19 +26,12 @@ const SearchQuestionModal: React.FC<SearchQuestionModalProps> = ({
   toggleIsModalOpen,
   onConfirm,
 }) => {
-  /**
-   * 关键字和搜索框 ref
-   */
   const [keyword, setKeyword] = useState('')
   const inputRef = React.createRef<InputRef>()
   const [selectedIndex, setSelectedIndex] = useState(0)
 
-  /**
-   * 搜索结果
-   */
-  const { questionVOList } = useSearchQuestion(keyword)
+  const { noteList, loading } = useSearchQuestion(keyword)
 
-  // 关闭 modal 时清空搜索关键词并重置选中项
   useEffect(() => {
     if (!isModalOpen) {
       setKeyword('')
@@ -48,31 +39,33 @@ const SearchQuestionModal: React.FC<SearchQuestionModalProps> = ({
     }
   }, [isModalOpen])
 
-  // 键盘事件监听
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [keyword])
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isModalOpen) return // 只有在 Modal 打开时处理键盘事件
+      if (!isModalOpen) return
 
       if (event.key === 'Enter') {
-        // 确认选中
-        if (questionVOList[selectedIndex]) {
-          onConfirm(questionVOList[selectedIndex]) // 确保传递选中的项
+        if (noteList[selectedIndex]) {
+          onConfirm(noteList[selectedIndex])
           toggleIsModalOpen()
         }
       }
 
       if (event.key === 'ArrowUp') {
         setSelectedIndex((prevState) => {
-          const newIndex = Math.max(0, prevState - 1) // 防止越界
-          scrollToSelected(newIndex) // 滚动到选中项
+          const newIndex = Math.max(0, prevState - 1)
+          scrollToSelected(newIndex)
           return newIndex
         })
       }
 
       if (event.key === 'ArrowDown') {
         setSelectedIndex((prevState) => {
-          const newIndex = Math.min(questionVOList.length - 1, prevState + 1) // 防止越界
-          scrollToSelected(newIndex) // 滚动到选中项
+          const newIndex = Math.min(noteList.length - 1, prevState + 1)
+          scrollToSelected(newIndex)
           return newIndex
         })
       }
@@ -80,16 +73,16 @@ const SearchQuestionModal: React.FC<SearchQuestionModalProps> = ({
 
     document.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.removeEventListener('keydown', handleKeyDown) // 清理事件监听器
+      document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isModalOpen, questionVOList, selectedIndex])
+  }, [isModalOpen, noteList, selectedIndex, onConfirm, toggleIsModalOpen])
 
   return (
     <Modal
       open={isModalOpen}
       footer={<SearchModalFooter />}
       onCancel={toggleIsModalOpen}
-      title={'搜索问题'}
+      title={'搜索笔记'}
       afterOpenChange={() => {
         if (inputRef.current) {
           inputRef.current.focus()
@@ -97,34 +90,49 @@ const SearchQuestionModal: React.FC<SearchQuestionModalProps> = ({
       }}
       width={'40%'}
     >
-      {/* 搜索框 */}
       <div className="mt-4">
         <Search
           ref={inputRef}
           value={keyword}
           onSearch={(value) => setKeyword(value)}
           onChange={(e) => setKeyword(e.target.value)}
-        ></Search>
+          placeholder="搜索问题标题或笔记内容"
+        />
       </div>
-      {/* 搜索结果列表 */}
       <div className="h-96 max-h-96 overflow-x-auto">
         <div className="test-xs my-2 font-medium text-gray-700">搜索结果</div>
-        {questionVOList.map((item, index) => (
-          <div
-            key={item.questionId}
-            className={`result-item-${index} cursor-pointer select-none border-b border-dashed p-3 transition-colors duration-200 ${index === selectedIndex ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
-            onClick={() => {
-              setSelectedIndex(index) // 鼠标点击时高亮该项
-            }}
-            onDoubleClick={() => {
-              onConfirm(item) // 双击时选中该项
-              toggleIsModalOpen()
-            }}
-          >
-            {item.title}
+        {loading ? (
+          <div className="flex h-40 items-center justify-center">
+            <Spin />
           </div>
-        ))}
-        {questionVOList.length === 0 && <Empty />}
+        ) : (
+          <>
+            {noteList.map((item, index) => (
+              <div
+                key={item.noteId}
+                className={`result-item-${index} cursor-pointer select-none border-b border-dashed p-3 transition-colors duration-200 ${index === selectedIndex ? 'bg-gray-200' : 'hover:bg-gray-50'}`}
+                onClick={() => {
+                  setSelectedIndex(index)
+                }}
+                onDoubleClick={() => {
+                  onConfirm(item)
+                  toggleIsModalOpen()
+                }}
+              >
+                <div className="mb-1 text-sm font-semibold text-neutral-800">
+                  {item.question.title}
+                </div>
+                <div className="mb-1 text-xs text-neutral-500">
+                  作者：{item.author.username}
+                </div>
+                <div className="line-clamp-2 text-sm text-neutral-600">
+                  {item.needCollapsed ? item.displayContent : item.content}
+                </div>
+              </div>
+            ))}
+            {noteList.length === 0 && <Empty description={'暂无搜索结果'} />}
+          </>
+        )}
       </div>
     </Modal>
   )

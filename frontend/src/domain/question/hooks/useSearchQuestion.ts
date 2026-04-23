@@ -1,44 +1,47 @@
 import { useEffect, useState } from 'react'
-import { QuestionVO } from '../types/types.ts'
 import debounce from 'lodash.debounce'
-import { questionService } from '../service/questionService.ts'
+import { noteService } from '../../note/service/noteService.ts'
+import { NoteWithRelations } from '../../note/types/serviceTypes.ts'
 
 /**
- * 根据关键字搜索问题，添加 debounce 处理
+ * 根据关键字搜索笔记（题目标题 + 笔记内容全文检索），添加 debounce 处理
  *
  * @param keyword 关键字
  */
 export function useSearchQuestion(keyword: string) {
   /**
-   * 问题列表
+   * 笔记列表
    */
-  const [questionVOList, setQuestionVOList] = useState<QuestionVO[]>([])
+  const [noteList, setNoteList] = useState<NoteWithRelations[]>([])
 
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // 处理关键字为空的情况
     if (keyword === undefined || keyword.trim() === '') {
-      setQuestionVOList([])
+      setNoteList([])
       return
     }
 
-    const searchQuestion = debounce(async () => {
+    const searchNote = debounce(async () => {
       setLoading(true)
-      const { data } = await questionService.searchQuestionService({ keyword })
-      setQuestionVOList(data)
-    }, 300) // 延迟 300 ms
+      const { data } = await noteService.searchFullText({
+        keyword,
+        page: 1,
+        pageSize: 20,
+      })
+      setNoteList(data)
+      setLoading(false)
+    }, 300)
 
-    searchQuestion()
-    setLoading(false)
+    searchNote()
 
     return () => {
-      searchQuestion.cancel()
+      searchNote.cancel()
     }
   }, [keyword])
 
   return {
     loading,
-    questionVOList,
+    noteList,
   }
 }

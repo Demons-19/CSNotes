@@ -295,6 +295,25 @@
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
+    <!-- 按问题标题 + 笔记内容全文搜索 -->
+    <select id="searchNotesByTitleAndContent" resultType="com.kama.notes.model.entity.Note">
+        SELECT
+            n.*,
+            (
+                COALESCE(MATCH(n.content) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE), 0)
+                + COALESCE(MATCH(q.title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE), 0)
+            ) AS relevance
+        FROM note n
+        INNER JOIN question q ON q.question_id = n.question_id
+        WHERE n.status = 1
+          AND (
+                MATCH(n.content) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+                OR MATCH(q.title) AGAINST(#{keyword} IN NATURAL LANGUAGE MODE)
+          )
+        ORDER BY relevance DESC, n.created_at DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
     <!-- 根据标签搜索笔记 -->
     <select id="searchNotesByTag" resultType="com.kama.notes.model.entity.Note">
         SELECT DISTINCT

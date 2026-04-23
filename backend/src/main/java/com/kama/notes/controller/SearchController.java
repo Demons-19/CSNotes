@@ -3,6 +3,7 @@ package com.kama.notes.controller;
 import com.kama.notes.model.base.ApiResponse;
 import com.kama.notes.model.entity.Note;
 import com.kama.notes.model.entity.User;
+import com.kama.notes.model.vo.note.NoteVO;
 import com.kama.notes.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +26,14 @@ public class SearchController {
         return searchService.searchNotes(keyword, page, pageSize);
     }
 
+    @GetMapping("/notes/fulltext")
+    public ApiResponse<List<NoteVO>> searchNotesFullText(
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "1") @Min(1) Integer page,
+            @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
+        return searchService.searchNotesFullText(keyword, page, pageSize);
+    }
+
     @GetMapping("/users")
     public ApiResponse<List<User>> searchUsers(
             @RequestParam String keyword,
@@ -41,4 +50,4 @@ public class SearchController {
             @RequestParam(defaultValue = "20") @Min(1) Integer pageSize) {
         return searchService.searchNotesByTag(keyword, tag, page, pageSize);
     }
-} 
+}

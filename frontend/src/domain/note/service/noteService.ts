@@ -22,6 +22,19 @@ export const noteService = {
   },
 
   /**
+   * 全文搜索笔记
+   */
+  searchFullText: (params: {
+    keyword: string
+    page?: number
+    pageSize?: number
+  }) => {
+    return httpClient.request<NoteWithRelations[]>(noteApiList.searchFullText, {
+      queryParams: params,
+    })
+  },
+
+  /**
    * 获取笔记详情服务
    */
   getNoteDetailService: (noteId: number) => {

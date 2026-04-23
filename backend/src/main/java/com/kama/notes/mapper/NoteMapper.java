@@ -67,6 +67,10 @@ public interface NoteMapper {
                            @Param("limit") int limit,
                            @Param("offset") int offset);
 
+    List<Note> searchNotesByTitleAndContent(@Param("keyword") String keyword,
+                                            @Param("limit") int limit,
+                                            @Param("offset") int offset);
+
     List<Note> searchNotesByTag(@Param("keyword") String keyword,
                                 @Param("tag") String tag,
                                 @Param("limit") int limit,

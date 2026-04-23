@@ -11,4 +11,5 @@ export const noteApiList: ApiList = {
   getTop3Count: ['GET', '/api/notes/top3count'],
   getHotRank: ['GET', '/api/notes/hot-rank'],
   downloadNote: ['GET', '/api/notes/download'],
+  searchFullText: ['GET', '/api/search/notes/fulltext'],
 }
